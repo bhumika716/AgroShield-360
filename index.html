@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgroShield 360</title>
+<style>
+:root{--g1:#1f6b35;--g2:#2e8b45;--g3:#e6f4e4;--ink:#17331f;--mut:#5d7565;--red:#c9372c;--redbg:#fde5e2;--blue:#1f6fb5;--bluebg:#e0eefb;--amb:#9a6a00;--ambbg:#fff1c9;--card:#f6fbf4}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+body{font-family:system-ui,-apple-system,"Segoe UI","Noto Sans Devanagari",Roboto,sans-serif;background:#cfe5cb;color:var(--ink);min-height:100vh;display:flex;justify-content:center}
+#app{width:100%;max-width:460px;min-height:100vh;background:var(--g3);position:relative;padding-bottom:84px}
+.hero{height:190px;position:relative;color:#fff;padding:14px 16px;background:
+ radial-gradient(ellipse 60% 40% at 25% 100%,#4b9a4f 60%,transparent 61%),
+ radial-gradient(ellipse 70% 45% at 80% 105%,#3b8643 60%,transparent 61%),
+ linear-gradient(180deg,#8fd0f0 0%,#d4f0f7 45%,#7fc16b 46%,#4e9f45 100%)}
+.hero::after{content:"";position:absolute;left:62%;top:78px;width:46px;height:30px;background:#c4452f;clip-path:polygon(0 40%,50% 0,100% 40%,100% 100%,0 100%)}
+.top{display:flex;align-items:center;gap:10px;position:relative;z-index:2}
+.logo{font-size:30px}
+.top h1{font-size:21px;line-height:1.1;text-shadow:0 1px 3px #0006}
+.top small{font-size:11px;text-shadow:0 1px 2px #0007}
+.badge{margin-left:auto;font-size:12px;font-weight:600;padding:5px 10px;border-radius:99px;background:var(--g1);color:#fff}
+.badge.off{background:#f5d142;color:#4a3a00}
+.gear{background:none;border:0;font-size:22px;cursor:pointer;filter:drop-shadow(0 1px 2px #0006)}
+.greet{position:absolute;left:16px;bottom:14px;z-index:2;text-shadow:0 1px 4px #0008}
+.greet b{font-size:22px;display:block}
+.greet span{font-size:13px}
+main{padding:12px;margin-top:-6px}
+.screen{display:none}.screen.on{display:block}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.card{background:var(--card);border-radius:16px;padding:12px 8px;text-align:center;border:1px solid #d3e8d0;box-shadow:0 2px 6px #1f6b3512}
+.card .ic{font-size:30px}
+.card h3{font-size:13px;font-weight:600;color:var(--mut)}
+.card .val{font-size:24px;font-weight:700;margin:2px 0 6px}
+.pill{display:inline-block;font-size:12px;padding:3px 10px;border-radius:99px;font-weight:600;background:#d8f0d4;color:var(--g1)}
+.card.warn{background:var(--redbg);border-color:#f2b8b1}.card.warn .pill{background:#fbc9c4;color:var(--red)}
+.card.info{background:var(--bluebg);border-color:#b7d4ee}.card.info .pill{background:#c6dff6;color:var(--blue)}
+.panel{background:var(--card);border-radius:16px;padding:12px;margin-top:10px;border:1px solid #d3e8d0}
+.pump{display:flex;align-items:center;gap:10px}
+.pump .ic{font-size:28px}
+.pump div{flex:1}.pump b{font-size:14px}.pump p{font-size:12px;color:var(--mut)}
+.btn{border:0;border-radius:99px;padding:10px 16px;font-weight:700;font-size:14px;cursor:pointer;background:var(--g1);color:#fff}
+.btn.grey{background:#8a8f8c}.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.amb{background:#f5d142;color:#4a3a00}
+.alert{margin-top:10px;border-radius:14px;padding:12px 14px;background:#ffe9c2;border-left:6px solid #e89a1a}
+.alert b{display:block;font-size:15px}.alert span{font-size:13px}
+.alert.ok{background:#e1f5dc;border-color:var(--g2)}
+.alert.bad{background:var(--redbg);border-color:var(--red)}
+.alert.info{background:var(--bluebg);border-color:var(--blue)}
+.alert.warn{background:var(--ambbg);border-color:#e89a1a}
+nav{position:fixed;bottom:0;width:100%;max-width:460px;display:flex;background:#fff;border-top:1px solid #cfe2cc;padding:6px 0 10px}
+nav button{flex:1;background:none;border:0;font-size:11px;color:var(--mut);cursor:pointer;padding:4px}
+nav button span{display:block;font-size:20px}
+nav button.on{color:var(--g1);font-weight:700}
+h2{font-size:18px;margin:4px 2px 8px}
+.sec{font-weight:700;font-size:14px;margin-bottom:8px}
+.row{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:14px}
+.row label{width:84px;font-weight:600}
+.row input[type=range]{flex:1;accent-color:var(--g1)}
+.row output{width:44px;text-align:right;font-weight:700}
+.seg{display:flex;gap:8px}
+.seg button{flex:1;padding:9px;border-radius:99px;border:1px solid #bcd6b8;background:#eef5ec;font-weight:600;cursor:pointer}
+.seg button.on{background:var(--g1);color:#fff;border-color:var(--g1)}
+.note{font-size:12px;color:var(--mut);margin-top:6px}
+.sw{width:50px;height:28px;border-radius:99px;background:#9aa;border:0;position:relative;cursor:pointer}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s}
+.sw.on{background:var(--g1)}.sw.on::after{left:25px}
+.between{display:flex;justify-content:space-between;align-items:center}
+#cal{display:none}
+.save{width:100%;margin-top:12px;padding:14px;font-size:16px;border-radius:14px}
+#toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:99px;font-size:13px;opacity:0;pointer-events:none;transition:.3s;z-index:9;max-width:90%}
+#toast.on{opacity:1}
+.demo button{margin:3px 3px 0 0;padding:7px 10px;font-size:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+ <header class="hero">
+  <div class="top">
+   <div class="logo">🌱</div>
+   <div><h1>AgroShield 360</h1><small data-i="tag"></small></div>
+   <div class="badge" id="conn"></div>
+   <button class="gear" onclick="go('settings')" aria-label="Settings">⚙️</button>
+  </div>
+  <div class="greet"><b data-i="hello"></b><span data-i="glance"></span></div>
+ </header>
+
+ <main>
+  <!-- HOME -->
+  <section class="screen on" id="s-home">
+   <div class="grid">
+    <div class="card" id="c-soil"><div class="ic">💧</div><h3 data-i="moisture"></h3><div class="val" id="v-soil">--</div><span class="pill" id="p-soil">--</span></div>
+    <div class="card" id="c-tank"><div class="ic">🛢️</div><h3 data-i="tank"></h3><div class="val" id="v-tank">--</div><span class="pill" id="p-tank">--</span></div>
+    <div class="card" id="c-rain"><div class="ic">🌧️</div><h3 data-i="rain"></h3><div class="val" id="v-rain">--</div><span class="pill" id="p-rain">--</span></div>
+    <div class="card" id="c-motor"><div class="ic">⚙️</div><h3 data-i="motor"></h3><div class="val" id="v-motor">--</div><span class="pill" id="p-motor">--</span></div>
+   </div>
+   <div class="panel pump">
+    <div class="ic">🚰</div>
+    <div><b data-i="pumpCtl"></b><p id="pump-note"></p></div>
+    <button class="btn" id="b-on" onclick="motor(true)">ON</button>
+    <button class="btn grey" id="b-off" onclick="motor(false)">OFF</button>
+   </div>
+   <div class="alert" id="alert"><b id="a-t"></b><span id="a-m"></span></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="screen" id="s-settings">
+   <h2 data-i="settings"></h2>
+   <div class="panel">
+    <div class="sec" data-i="s1"></div>
+    <div class="row"><label data-i="dry"></label><input type="range" id="dry" min="5" max="90"><output id="dry-o"></output></div>
+    <div class="row"><label data-i="wet"></label><input type="range" id="wet" min="10" max="95"><output id="wet-o"></output></div>
+    <div class="note" data-i="limNote"></div>
+   </div>
+   <div class="panel">
+    <div class="sec" data-i="s2"></div>
+    <div class="seg"><button id="m-AUTO" onclick="setMode('AUTO')" data-i="auto"></button><button id="m-MANUAL" onclick="setMode('MANUAL')" data-i="manual"></button></div>
+    <div class="note" data-i="modeNote"></div>
+   </div>
+   <div class="panel">
+    <div class="sec" data-i="s3"></div>
+    <div class="seg"><button id="l-en" onclick="setLang('en')">English</button><button id="l-hi" onclick="setLang('hi')">हिंदी</button></div>
+   </div>
+   <div class="panel">
+    <div class="between"><div class="sec" data-i="s4" style="margin:0"></div><button class="sw" id="sw-voice" onclick="toggleVoice()" aria-label="Voice alerts"></button></div>
+   </div>
+   <div class="panel">
+    <div class="between"><div class="sec" data-i="s5" style="margin:0"></div><button class="btn amb" onclick="toggleCal()" data-i="calibrate"></button></div>
+    <div id="cal">
+     <div class="note" data-i="calNote"></div>
+     <div class="row"><label data-i="rawNow"></label><b id="raw-now">--</b></div>
+     <div class="seg"><button onclick="takeRaw('dry')"><span data-i="setDry"></span>: <b id="raw-dry">--</b></button><button onclick="takeRaw('wet')"><span data-i="setWet"></span>: <b id="raw-wet">--</b></button></div>
+     <button class="btn save" onclick="saveCal()" data-i="saveCal"></button>
+    </div>
+   </div>
+   <button class="btn save" onclick="saveSettings()">💾 <span data-i="save"></span></button>
+   <div class="note" style="text-align:center" data-i="saveNote"></div>
+  </section>
+
+  <!-- VOICE -->
+  <section class="screen" id="s-voice">
+   <h2 data-i="voice"></h2>
+   <div class="panel">
+    <div class="between"><div class="sec" data-i="s4" style="margin:0"></div><button class="sw" id="sw-voice2" onclick="toggleVoice()"></button></div>
+    <div class="note" data-i="voiceNote"></div>
+    <button class="btn save" onclick="speak(t('testVoice'),true)" data-i="testBtn"></button>
+   </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="screen" id="s-about">
+   <h2 data-i="about"></h2>
+   <div class="panel"><div class="sec">AgroShield 360</div><div class="note" data-i="aboutText"></div></div>
+   <div class="panel demo">
+    <div class="between"><div class="sec" style="margin:0" data-i="demo"></div><button class="sw" id="sw-demo" onclick="toggleDemo()"></button></div>
+    <div id="demo-btns" style="display:none">
+     <button class="btn grey" onclick="scn({moisture:62,tank:'AVAILABLE',rain:false})">Normal</button>
+     <button class="btn grey" onclick="scn({moisture:25,tank:'AVAILABLE',rain:false})">Dry soil</button>
+     <button class="btn grey" onclick="scn({moisture:48,tank:'FULL',rain:false})">Tank full</button>
+     <button class="btn grey" onclick="scn({moisture:55,tank:'EMPTY',rain:false})">Tank empty</button>
+     <button class="btn grey" onclick="scn({moisture:70,tank:'AVAILABLE',rain:true})">Rain</button>
+     <button class="btn grey" onclick="scn({moisture:80,tank:'AVAILABLE',rain:true})">Rain + wet</button>
+     <button class="btn grey" onclick="scn({fault:true})">Sensor fault</button>
+    </div>
+   </div>
+  </section>
+ </main>
+
+ <nav>
+  <button class="on" id="n-home" onclick="go('home')"><span>🏠</span><i data-i="home" style="font-style:normal"></i></button>
+  <button id="n-settings" onclick="go('settings')"><span>⚙️</span><i data-i="settings" style="font-style:normal"></i></button>
+  <button id="n-voice" onclick="go('voice')"><span>🔊</span><i data-i="voice" style="font-style:normal"></i></button>
+  <button id="n-about" onclick="go('about')"><span>ℹ️</span><i data-i="about" style="font-style:normal"></i></button>
+ </nav>
+ <div id="toast"></div>
+</div>
+
+<script>
+/* ---------- Config ---------- */
+// When opened as a file on a laptop, talk to the ESP32 hotspot address.
+const BASE = location.protocol === 'file:' ? 'http://192.168.4.1' : '';
+const POLL_MS = 2000;
+
+/* ---------- Text (English / Hindi) ---------- */
+const TXT = {
+en:{tag:'Smart Farming Made Simple',hello:'Namaste, Farmer! 👋',glance:'Your farm status at a glance',
+ moisture:'Soil Moisture',tank:'Water Tank',rain:'Rain Status',motor:'Motor Status',
+ home:'Home',settings:'Settings',voice:'Voice',about:'About',connected:'Connected',disc:'Not connected',
+ optimal:'Optimal',dryS:'Soil is Dry',wetS:'Soil is Wet',avail:'Available',full:'Full',empty:'Empty',
+ water:'Water Present',isFull:'Tank is Full',refill:'Refill Water',noRain:'No Rain',rainY:'Rain Detected',normal:'Normal',paused:'Motor Paused',
+ on:'ON',off:'OFF',ready:'Ready',active:'Irrigation Active',dueRain:'Due to Rain',blocked:'Blocked',fault:'Sensor Fault',
+ pumpCtl:'Water Pump Control',pAuto:'Automatic mode. Switch to Manual to control the pump.',pMan:'Control the motor manually if needed.',pUnsafe:'Pump is blocked for safety.',
+ aOkT:'All Systems Normal',aOkM:'Happy Farming! 🌱',aDryT:'Low Soil Moisture!',aDryM:'Automatic irrigation has started.',aDryM2:'Soil is dry. Irrigation will start when it is safe.',
+ aFullT:'Tank is Full',aFullM:'Motor will remain OFF.',aEmptyT:'Tank Empty!',aEmptyM:'Please refill water tank.',
+ aRainT:'Rain Detected',aRainM:'Motor stopped for safety.',aWlT:'Waterlogging Risk!',aWlM:'Rain with wet soil. Motor is OFF.',aFaultT:'Sensor Fault!',aFaultM:'Motor is OFF. Check the sensors.',aDiscT:'Not Connected',aDiscM:'Join the AgroShield_360 Wi-Fi network.',
+ s1:'1. Soil Moisture Limits',dry:'Dry Limit',wet:'Wet Limit',limNote:'Motor turns ON below Dry Limit and OFF at Wet Limit.',
+ s2:'2. Irrigation Mode',auto:'Automatic',manual:'Manual',modeNote:'Automatic mode uses sensors to control the motor. Safety rules always apply.',
+ s3:'3. Language',s4:'4. Voice Alerts',s5:'5. Sensor Calibration',calibrate:'Calibrate',
+ calNote:'Put the sensor in dry soil, tap Dry. Then put it in wet soil, tap Wet. Then save.',rawNow:'Current',setDry:'Set Dry',setWet:'Set Wet',saveCal:'Save Calibration',
+ save:'Save Settings',saveNote:'Settings will be saved in ESP32 memory.',saved:'Settings saved',calSaved:'Calibration saved',failed:'Could not reach ESP32',
+ testM:'Test Mode',noApi:'ESP32 firmware does not support this yet',badLim:'Wet Limit must be at least 10% above Dry Limit',noCal:'Tap Set Dry and Set Wet first',cmdFail:'Motor command was refused',
+ voiceNote:'Spoken alerts need phone speech support. Tap Test to check your phone.',testBtn:'Test Voice',testVoice:'Voice alerts are working.',
+ aboutText:'AgroShield 360 is a low-cost smart irrigation prototype. It works offline over the ESP32 Wi-Fi hotspot. No internet is needed.',demo:'Demo mode (no ESP32)'},
+hi:{tag:'स्मार्ट खेती, आसान तरीका',hello:'नमस्ते, किसान भाई! 👋',glance:'आपके खेत की स्थिति एक नज़र में',
+ moisture:'मिट्टी की नमी',tank:'पानी की टंकी',rain:'बारिश की स्थिति',motor:'मोटर की स्थिति',
+ home:'होम',settings:'सेटिंग्स',voice:'आवाज़',about:'जानकारी',connected:'जुड़ा हुआ',disc:'जुड़ा नहीं',
+ optimal:'बिल्कुल सही',dryS:'मिट्टी सूखी है',wetS:'मिट्टी गीली है',avail:'उपलब्ध',full:'भरी हुई',empty:'खाली',
+ water:'पानी है',isFull:'टंकी भरी है',refill:'पानी भरें',noRain:'बारिश नहीं',rainY:'बारिश हो रही है',normal:'सामान्य',paused:'मोटर रुकी है',
+ on:'चालू',off:'बंद',ready:'तैयार',active:'सिंचाई चालू',dueRain:'बारिश के कारण',blocked:'रुका हुआ',fault:'सेंसर खराब',
+ pumpCtl:'पानी पंप नियंत्रण',pAuto:'ऑटोमैटिक मोड है। पंप चलाने के लिए मैन्युअल चुनें।',pMan:'ज़रूरत हो तो मोटर हाथ से चलाएँ।',pUnsafe:'सुरक्षा के लिए पंप रुका है।',
+ aOkT:'सब कुछ सामान्य है',aOkM:'खुशहाल खेती! 🌱',aDryT:'मिट्टी में नमी कम है!',aDryM:'ऑटोमैटिक सिंचाई शुरू हो गई है।',aDryM2:'मिट्टी सूखी है। सुरक्षित होने पर सिंचाई शुरू होगी।',
+ aFullT:'टंकी भरी है',aFullM:'मोटर बंद रहेगी।',aEmptyT:'टंकी खाली है!',aEmptyM:'कृपया टंकी में पानी भरें।',
+ aRainT:'बारिश हो रही है',aRainM:'सुरक्षा के लिए मोटर बंद की गई।',aWlT:'जलभराव का खतरा!',aWlM:'बारिश और गीली मिट्टी। मोटर बंद है।',aFaultT:'सेंसर में खराबी!',aFaultM:'मोटर बंद है। सेंसर जाँचें।',aDiscT:'जुड़ा नहीं है',aDiscM:'AgroShield_360 वाई-फाई से जुड़ें।',
+ s1:'1. नमी की सीमाएँ',dry:'सूखी सीमा',wet:'गीली सीमा',limNote:'सूखी सीमा से नीचे मोटर चालू और गीली सीमा पर बंद होती है।',
+ s2:'2. सिंचाई मोड',auto:'ऑटोमैटिक',manual:'मैन्युअल',modeNote:'ऑटोमैटिक मोड में सेंसर मोटर चलाते हैं। सुरक्षा नियम हमेशा लागू रहते हैं।',
+ s3:'3. भाषा',s4:'4. आवाज़ अलर्ट',s5:'5. सेंसर कैलिब्रेशन',calibrate:'कैलिब्रेट',
+ calNote:'सेंसर को सूखी मिट्टी में रखकर "सूखा" दबाएँ। फिर गीली मिट्टी में रखकर "गीला" दबाएँ। फिर सेव करें।',rawNow:'अभी',setDry:'सूखा',setWet:'गीला',saveCal:'कैलिब्रेशन सेव करें',
+ save:'सेटिंग्स सेव करें',saveNote:'सेटिंग्स ESP32 की मेमोरी में सेव होंगी।',saved:'सेटिंग्स सेव हो गईं',calSaved:'कैलिब्रेशन सेव हुआ',failed:'ESP32 से संपर्क नहीं हो पाया',
+ testM:'टेस्ट मोड',noApi:'ESP32 फर्मवेयर में यह सुविधा अभी नहीं है',badLim:'गीली सीमा, सूखी सीमा से कम से कम 10% ज़्यादा होनी चाहिए',noCal:'पहले सूखा और गीला दबाएँ',cmdFail:'मोटर का आदेश स्वीकार नहीं हुआ',
+ voiceNote:'आवाज़ के लिए फ़ोन में स्पीच सपोर्ट चाहिए। जाँचने के लिए टेस्ट दबाएँ।',testBtn:'आवाज़ टेस्ट करें',testVoice:'आवाज़ अलर्ट काम कर रहे हैं।',
+ aboutText:'AgroShield 360 एक कम लागत वाला स्मार्ट सिंचाई प्रोटोटाइप है। यह ESP32 के वाई-फाई हॉटस्पॉट पर बिना इंटरनेट चलता है।',demo:'डेमो मोड (ESP32 के बिना)'}
+};
+
+/* ---------- State ---------- */
+let S = {moisture:0,soilStatus:'',tank:'AVAILABLE',rain:false,motor:false,mode:'AUTO',dryLimit:30,wetLimit:70,fault:false,raw:0,testMode:false};
+let lang = localStorage.getItem('lang') || 'en';
+let voiceOn = localStorage.getItem('voice') !== 'off';
+let online = false, demo = false, cfgLoaded = false, lastAlert = '';
+let calDry = null, calWet = null;
+const $ = id => document.getElementById(id);
+const t = k => (TXT[lang][k] ?? k);
+
+/* ---------- Helpers ---------- */
+function failMsg(e){return String(e&&e.message)==='404'?t('noApi'):t('failed');}
+function toast(m){const e=$('toast');e.textContent=m;e.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>e.classList.remove('on'),2500);}
+async function api(path, body){
+  const c=new AbortController(), id=setTimeout(()=>c.abort(),7000);
+  try{
+    const r=await fetch(BASE+path, body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:c.signal}:{signal:c.signal});
+    if(!r.ok) throw new Error(String(r.status));
+    return await r.json().catch(()=>({}));
+  } finally { clearTimeout(id); }
+}
+function speak(text, force){
+  if((!voiceOn && !force) || !('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text); u.lang = lang==='hi'?'hi-IN':'en-IN';
+  speechSynthesis.speak(u);
+}
+
+/* ---------- Safety + alert logic (display only; ESP32 is the real authority) ---------- */
+function unsafe(){return S.fault || S.tank==='EMPTY' || S.tank==='FULL' || S.rain;}
+function getAlert(){
+  if(!online && !demo) return {c:'warn',t:t('aDiscT'),m:t('aDiscM')};
+  if(S.fault) return {c:'bad',t:t('aFaultT'),m:t('aFaultM')};
+  if(S.tank==='EMPTY') return {c:'bad',t:t('aEmptyT'),m:t('aEmptyM')};
+  if(S.tank==='FULL') return {c:'info',t:t('aFullT'),m:t('aFullM')};
+  if(S.rain && S.moisture>=S.wetLimit) return {c:'bad',t:t('aWlT'),m:t('aWlM')};
+  if(S.rain) return {c:'info',t:t('aRainT'),m:t('aRainM')};
+  if(S.moisture<S.dryLimit) return {c:'bad',t:t('aDryT'),m:S.motor?t('aDryM'):t('aDryM2')};
+  return {c:'ok',t:t('aOkT'),m:t('aOkM')};
+}
+
+/* ---------- Render ---------- */
+function setCard(id, cls, val, pill){
+  const c=$('c-'+id); c.className='card '+cls;
+  $('v-'+id).textContent=val; $('p-'+id).textContent=pill;
+}
+function render(){
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i]').forEach(e=>e.textContent=t(e.dataset.i));
+  const cn=$('conn'); cn.textContent=(online||demo)?'📶 '+t('connected'):'⚠ '+t('disc'); cn.className='badge'+((online||demo)?'':' off');
+
+  // soil
+  const dry=S.moisture<S.dryLimit, wet=S.moisture>=S.wetLimit;
+  setCard('soil', S.fault||dry?'warn':'', S.fault?'--':S.moisture+'%', S.fault?t('fault'):dry?t('dryS'):wet?t('wetS'):t('optimal'));
+  // tank
+  const tk=S.tank;
+  setCard('tank', tk==='EMPTY'?'warn':tk==='FULL'?'info':'', tk==='EMPTY'?t('empty'):tk==='FULL'?t('full'):t('avail'), tk==='EMPTY'?t('refill'):tk==='FULL'?t('isFull'):t('water'));
+  // rain
+  setCard('rain', S.rain?'info':'', S.rain?t('rainY'):t('noRain'), S.rain?t('paused'):t('normal'));
+  // motor
+  setCard('motor', '', S.motor?t('on'):t('off'), S.motor?t('active'):S.testMode?t('testM'):S.rain?t('dueRain'):unsafe()?t('blocked'):t('ready'));
+
+  // pump buttons: only in manual mode, ON only when safe
+  const man=S.mode==='MANUAL';
+  $('b-on').textContent=t('on'); $('b-off').textContent=t('off');
+  $('b-on').disabled=!man||unsafe()||S.testMode||(!online&&!demo);
+  $('b-off').disabled=!man||S.testMode||(!online&&!demo);
+  $('pump-note').textContent = !man?t('pAuto'):unsafe()?t('pUnsafe'):t('pMan');
+
+  const a=getAlert(); $('alert').className='alert '+a.c; $('a-t').textContent=a.t; $('a-m').textContent=a.m;
+  const key=a.t; if(key!==lastAlert){ lastAlert=key; if(a.c!=='ok') speak(a.t+'. '+a.m); }
+
+  // settings widgets
+  $('m-AUTO').classList.toggle('on',S.mode==='AUTO'); $('m-MANUAL').classList.toggle('on',man);
+  $('l-en').classList.toggle('on',lang==='en'); $('l-hi').classList.toggle('on',lang==='hi');
+  $('sw-voice').classList.toggle('on',voiceOn); $('sw-voice2').classList.toggle('on',voiceOn);
+  $('sw-demo').classList.toggle('on',demo); $('demo-btns').style.display=demo?'block':'none';
+  $('raw-now').textContent=S.raw||'--'; $('raw-dry').textContent=calDry??'--'; $('raw-wet').textContent=calWet??'--';
+}
+
+/* ---------- Navigation ---------- */
+function go(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); $('s-'+name).classList.add('on');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('on')); $('n-'+name).classList.add('on');
+  window.scrollTo(0,0);
+}
+
+/* ---------- Settings actions ---------- */
+function loadSliders(){ $('dry').value=S.dryLimit; $('wet').value=S.wetLimit; $('dry-o').textContent=S.dryLimit+'%'; $('wet-o').textContent=S.wetLimit+'%'; }
+$('dry').oninput=e=>$('dry-o').textContent=e.target.value+'%';
+$('wet').oninput=e=>$('wet-o').textContent=e.target.value+'%';
+function setMode(m){S.mode=m;render();}
+function setLang(l){lang=l;localStorage.setItem('lang',l);lastAlert='';render();}
+function toggleVoice(){voiceOn=!voiceOn;localStorage.setItem('voice',voiceOn?'on':'off');if(voiceOn)speak(t('testVoice'),true);render();}
+function toggleCal(){const c=$('cal');c.style.display=c.style.display==='block'?'none':'block';}
+function takeRaw(w){ if(!S.raw) return toast(t('failed')); if(w==='dry')calDry=S.raw; else calWet=S.raw; render(); }
+
+async function saveSettings(){
+  const d=+$('dry').value, w=+$('wet').value;
+  if(w-d<10) return toast(t('badLim'));
+  S.dryLimit=d; S.wetLimit=w;
+  const body={dryLimit:d,wetLimit:w,mode:S.mode,language:lang==='hi'?'Hindi':'English',voiceAlerts:voiceOn};
+  try{ if(!demo) await api('/api/settings',body); toast(t('saved')); } catch(e){ toast(failMsg(e)); }
+  render();
+}
+async function saveCal(){
+  if(calDry==null||calWet==null) return toast(t('noCal'));
+  try{ if(!demo) await api('/api/calibrate',{dryRaw:calDry,wetRaw:calWet}); toast(t('calSaved')); } catch(e){ toast(failMsg(e)); }
+}
+async function motor(on){
+  if(on && unsafe()) return toast(t('pUnsafe'));
+  try{
+    if(demo){ S.motor=on; } else { await api('/api/motor',{motor:on}); await poll(); }
+  } catch(e){ toast(t('cmdFail')); }
+  render();
+}
+
+/* ---------- Polling the ESP32 ---------- */
+// Translate the firmware's /api/status fields into the dashboard's own fields.
+// Firmware fields: status, soilRaw, moisture, rainRaw, rainDetected, tankStatus, decision, alert, motor
+// Fields the firmware doesn't send (mode, limits, language...) are simply left alone.
+function norm(f){
+  const d={};
+  const up=v=>String(v??'').toUpperCase();
+  if(f.moisture!==undefined) d.moisture=Number(f.moisture);
+  if(f.soilRaw!==undefined) d.raw=Number(f.soilRaw);
+  if(f.rainDetected!==undefined) d.rain=(f.rainDetected===true||up(f.rainDetected)==='TRUE'||up(f.rainDetected)==='YES');
+  else if(f.rain!==undefined) d.rain=!!f.rain;
+  if(f.motor!==undefined) d.motor=(f.motor===true||['ON','TRUE','1'].includes(up(f.motor)));
+  const tk=up(f.tankStatus ?? f.tank);
+  if(tk) d.tank = /EMPTY|LOW/.test(tk) ? 'EMPTY' : /FULL|HIGH/.test(tk) ? 'FULL' : 'AVAILABLE';
+  const flat=up(f.status)+' '+up(f.alert)+' '+tk;
+  if(f.status!==undefined||f.alert!==undefined||tk) d.fault=/FAULT|ERROR|INVALID/.test(flat);
+  d.testMode=/TEST/.test(up(f.motor));
+  ['mode','dryLimit','wetLimit','language','voiceAlerts'].forEach(k=>{ if(f[k]!==undefined) d[k]=f[k]; });
+  d.fwAlert=f.alert; d.fwDecision=f.decision;
+  return d;
+}
+let polling=false;
+async function poll(){
+  if(demo||polling) return;
+  polling=true;
+  try{
+    const d=norm(await api('/api/status'));
+    if(window.DEBUG) console.log('status',d);
+    online=true;
+    S={...S,...d};
+    if(!cfgLoaded){ // first load: take saved settings from the ESP32
+      cfgLoaded=true;
+      if(d.language) lang = d.language==='Hindi'?'hi':'en';
+      if(typeof d.voiceAlerts==='boolean') voiceOn=d.voiceAlerts;
+      loadSliders();
+    }
+  } catch(e){ online=false; }
+  polling=false;
+  render();
+}
+
+/* ---------- Demo mode (test without hardware) ---------- */
+function toggleDemo(){
+  demo=!demo; online=false;
+  if(demo){ S={...S,moisture:62,tank:'AVAILABLE',rain:false,motor:false,fault:false,raw:2100}; loadSliders(); }
+  render();
+}
+function scn(o){ S={...S,fault:false,motor:false,...o,raw:2100}; if(!S.fault&&!unsafe()&&S.mode==='AUTO'&&S.moisture<S.dryLimit) S.motor=true; render(); }
+
+/* ---------- Start ---------- */
+loadSliders(); render(); poll(); setInterval(poll,POLL_MS);
+if(location.search.includes('demo=1')) toggleDemo();
+</script>
+</body>
+</html>
