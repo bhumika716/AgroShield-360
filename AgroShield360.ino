@@ -1,5 +1,6 @@
 #include <WiFi.h>
 #include <WebServer.h>
+#include "dashboard_html.h"
 
 #define BUZZER_PIN 26
 #define SOIL_PIN 34
@@ -26,32 +27,97 @@ bool currentRainDetected = false;
 String currentTankStatus = "UNKNOWN";
 String currentDecision = "STARTING";
 String currentAlert = "NONE";
+bool currentMotorOn = false;
+unsigned long lastSensorUpdate = 0;
+
+int dryLimitPercent = 30;
+int wetLimitPercent = 70;
+
+int calibratedDryRaw = DRY_RAW;
+int calibratedWetRaw = WET_RAW;
+
+String currentMode = "AUTO";
+String currentLanguage = "English";
+bool voiceAlertsEnabled = true;
+bool manualMotorCommand = false;
+String activeBuzzerType = "OFF";
+int buzzerPulsesRemaining = 0;
+
+unsigned long buzzerOnDuration = 0;
+unsigned long buzzerOffDuration = 0;
+unsigned long buzzerLastChange = 0;
+
+bool buzzerIsOn = false;
 
 void buzzerAlert(String type) {
-  if (type == "EMPTY") {
-    for (int i = 0; i < 3; i++) {
-      digitalWrite(BUZZER_PIN, HIGH);
-      delay(200);
-      digitalWrite(BUZZER_PIN, LOW);
-      delay(200);
-    }
-  }
-  else if (type == "FULL") {
-    digitalWrite(BUZZER_PIN, HIGH);
-    delay(1000);
+
+  if (type == "OFF") {
+    activeBuzzerType = "OFF";
+    buzzerPulsesRemaining = 0;
+    buzzerIsOn = false;
     digitalWrite(BUZZER_PIN, LOW);
+    return;
   }
-  else if (type == "CRITICAL") {
-    for (int i = 0; i < 3; i++) {
-      digitalWrite(BUZZER_PIN, HIGH);
-      delay(700);
-      digitalWrite(BUZZER_PIN, LOW);
-      delay(300);
+
+  if (type != activeBuzzerType || buzzerPulsesRemaining == 0) {
+
+    activeBuzzerType = type;
+    buzzerIsOn = true;
+    buzzerLastChange = millis();
+
+    if (type == "EMPTY") {
+      buzzerPulsesRemaining = 3;
+      buzzerOnDuration = 200;
+      buzzerOffDuration = 200;
     }
+    else if (type == "FULL") {
+      buzzerPulsesRemaining = 1;
+      buzzerOnDuration = 1000;
+      buzzerOffDuration = 0;
+    }
+    else if (type == "CRITICAL") {
+      buzzerPulsesRemaining = 3;
+      buzzerOnDuration = 700;
+      buzzerOffDuration = 300;
+    }
+
+    digitalWrite(BUZZER_PIN, HIGH);
+  }
+}
+
+void updateBuzzer() {
+
+  if (activeBuzzerType == "OFF" ||
+      buzzerPulsesRemaining <= 0) {
+    return;
+  }
+
+  unsigned long duration =
+      buzzerIsOn ? buzzerOnDuration : buzzerOffDuration;
+
+  if (millis() - buzzerLastChange < duration) {
+    return;
+  }
+  buzzerLastChange = millis();
+
+  if (buzzerIsOn) {
+    digitalWrite(BUZZER_PIN, LOW);
+    buzzerIsOn = false;
+    buzzerPulsesRemaining--;
   }
   else {
-    digitalWrite(BUZZER_PIN, LOW);
+    digitalWrite(BUZZER_PIN, HIGH);
+    buzzerIsOn = true;
   }
+}
+
+void relayOn() {
+  pinMode(RELAY_PIN, OUTPUT);
+  digitalWrite(RELAY_PIN, LOW);
+}
+
+void relayOff() {
+  pinMode(RELAY_PIN, INPUT);
 }
 
 void handleRoot() {
@@ -68,9 +134,160 @@ void handleStatus() {
   json += "\"tankStatus\":\"" + currentTankStatus + "\",";
   json += "\"decision\":\"" + currentDecision + "\",";
   json += "\"alert\":\"" + currentAlert + "\",";
-  json += "\"motor\":\"OFF (TEST MODE)\"";
+  json += "\"motor\":\"" + String(currentMotorOn ? "ON" : "OFF") + "\",";
+  json += "\"mode\":\"" + currentMode + "\",";
+  json += "\"dryLimit\":" + String(dryLimitPercent) + ",";
+  json += "\"wetLimit\":" + String(wetLimitPercent) + ",";
+  json += "\"language\":\"" + currentLanguage + "\",";
+  json += "\"voiceAlerts\":" + String(voiceAlertsEnabled ? "true" : "false");
   json += "}";
+  server.sendHeader("Access-Control-Allow-Origin", "*");
   server.send(200, "application/json", json);
+}
+
+String getJsonValue(String body, String key) {
+  String searchKey = "\"" + key + "\"";
+
+  int keyIndex = body.indexOf(searchKey);
+  if (keyIndex == -1) return "";
+
+  int colonIndex = body.indexOf(':', keyIndex);
+  if (colonIndex == -1) return "";
+
+  int start = colonIndex + 1;
+
+  while (start < body.length() && body[start] == ' ') {
+    start++;
+  }
+
+  int end;
+
+  if (body[start] == '"') {
+    start++;
+    end = body.indexOf('"', start);
+  } 
+  else {
+    end = body.indexOf(',', start);
+    if (end == -1) {
+      end = body.indexOf('}', start);
+    }
+  }
+
+  if (end == -1) return "";
+
+  String value = body.substring(start, end);
+  value.trim();
+
+  return value;
+}
+
+void handleSettings() {
+  String body = server.arg("plain");
+
+  String dry = getJsonValue(body, "dryLimit");
+  String wet = getJsonValue(body, "wetLimit");
+  String mode = getJsonValue(body, "mode");
+  String language = getJsonValue(body, "language");
+  String voice = getJsonValue(body, "voiceAlerts");
+
+  int newDry = dry.toInt();
+  int newWet = wet.toInt();
+
+  if (dry == "" || wet == "" ||
+      newDry < 0 || newDry > 100 ||
+      newWet < 0 || newWet > 100 ||
+      newWet - newDry < 10 ||
+      (mode != "AUTO" && mode != "MANUAL")) {
+
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(400, "application/json",
+                "{\"success\":false,\"message\":\"Invalid settings\"}");
+    return;
+  }
+
+  dryLimitPercent = newDry;
+  wetLimitPercent = newWet;
+  currentMode = mode;
+
+  if (language == "Hindi" || language == "English") {
+    currentLanguage = language;
+  }
+
+  voiceAlertsEnabled = (voice == "true");
+
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.send(200, "application/json",
+              "{\"success\":true,\"message\":\"Settings saved\"}");
+}
+
+void handleCalibration() {
+  String body = server.arg("plain");
+
+  String dry = getJsonValue(body, "dryRaw");
+  String wet = getJsonValue(body, "wetRaw");
+
+  if (dry == "" || wet == "") {
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(400, "application/json",
+                "{\"success\":false,\"message\":\"Missing calibration values\"}");
+    return;
+  }
+
+  int newDry = dry.toInt();
+  int newWet = wet.toInt();
+
+  if (newDry < 0 || newDry > 4095 ||
+      newWet < 0 || newWet > 4095 ||
+      newDry - newWet < 10) {
+
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(400, "application/json",
+                "{\"success\":false,\"message\":\"Invalid calibration values\"}");
+    return;
+  }
+
+  calibratedDryRaw = newDry;
+  calibratedWetRaw = newWet;
+
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.send(200, "application/json",
+              "{\"success\":true,\"message\":\"Calibration saved\"}");
+}
+
+void handleMotor() {
+  String body = server.arg("plain");
+  String motor = getJsonValue(body, "motor");
+
+  if (motor != "true" && motor != "false") {
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(400, "application/json",
+                "{\"success\":false,\"message\":\"Invalid motor command\"}");
+    return;
+  }
+
+  if (currentMode != "MANUAL") {
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(400, "application/json",
+                "{\"success\":false,\"message\":\"Switch to MANUAL mode first\"}");
+    return;
+  }
+
+  if (motor == "true" &&
+      (currentTankStatus == "EMPTY" ||
+       currentTankStatus == "INVALID" ||
+       currentRainDetected)) {
+
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(409, "application/json",
+                "{\"success\":false,\"message\":\"Safety condition: Motor cannot start\"}");
+    return;
+  }
+
+  manualMotorCommand = (motor == "true");
+
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.send(200, "application/json",
+              "{\"success\":true,\"message\":\"Motor command received\"}");
 }
 
 void setup() {
@@ -82,10 +299,15 @@ void setup() {
   delay(2000);
   Serial.println("HTTP Server Started");
   delay(2000);
-  server.on("/", handleRoot);
+  server.on("/", [](){
+    server.send_P(200, "text/html", DASHBOARD_HTML);
+  });
   
 
   server.on("/api/status", handleStatus);
+  server.on("/api/settings", HTTP_POST, handleSettings);
+  server.on("/api/calibrate", HTTP_POST, handleCalibration);
+  server.on("/api/motor", HTTP_POST, handleMotor);
   server.begin();
   Serial.println("HTTP Server Started");
 
@@ -98,22 +320,27 @@ void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
 
-  // Relay remains disabled in TEST MODE
-  pinMode(RELAY_PIN, INPUT);
+  // Relay initially OFF
+  relayOff();
 
   digitalWrite(GREEN_LED, LOW);
   digitalWrite(YELLOW_LED, LOW);
   digitalWrite(RED_LED, LOW);
 
   Serial.println("===== AGROSHIELD 360 =====");
-  Serial.println("TANK PROTECTION TEST MODE");
+  Serial.println("AUTOMATIC IRRIGATION MODE");
 }
 
 void loop() {
+  server.handleClient();
+  updateBuzzer();
+  if (millis() - lastSensorUpdate < 2000) return;
+  lastSensorUpdate = millis();
+
   int soilRaw = analogRead(SOIL_PIN);
   int rainRaw = analogRead(RAIN_PIN);
 
-  int moisture = map(soilRaw, DRY_RAW, WET_RAW, 0, 100);
+  int moisture = map(soilRaw, calibratedDryRaw, calibratedWetRaw, 0, 100);
   moisture = constrain(moisture, 0, 100);
 
   bool rainDetected = (rainRaw < RAIN_THRESHOLD);
@@ -124,8 +351,8 @@ void loop() {
   bool tankEmpty = (tank1 == LOW && tank2 == HIGH);
   bool tankFull = (tank1 == HIGH && tank2 == LOW);
 
-  bool irrigationDemand = (moisture < 30);
-  bool waterloggingRisk = (rainDetected && moisture > 70);
+  bool irrigationDemand = (moisture < dryLimitPercent);
+  bool waterloggingRisk = (rainDetected && moisture > wetLimitPercent);
 
   String decision = "NO IRRIGATION";
   String alert = "NONE";
@@ -167,8 +394,44 @@ void loop() {
   else {
     currentTankStatus = "INVALID";
   }
-currentDecision = decision;
-currentAlert = alert;
+  currentDecision = decision;
+
+  // AUTO / MANUAL MOTOR CONTROL
+  if (currentMode == "MANUAL")
+  {
+
+    bool manualAllowed =
+        currentTankStatus != "EMPTY" &&
+        currentTankStatus != "INVALID" &&
+        !currentRainDetected;
+
+    if (manualMotorCommand && manualAllowed)
+    {
+      relayOn();
+      currentMotorOn = true;
+    }
+    else
+    {
+      relayOff();
+      currentMotorOn = false;
+    }
+  }
+  else
+  {
+
+    manualMotorCommand = false;
+
+    if (decision == "IRRIGATION REQUIRED")
+    {
+      relayOn();
+      currentMotorOn = true;
+    }
+    else
+    {
+      relayOff();
+      currentMotorOn = false;
+    }
+  }
 
   if (tankFull) {
     if (alert == "NONE") {
@@ -177,6 +440,9 @@ currentAlert = alert;
       alert += " | TANK FULL - STOP FILLING";
     }
   }
+
+  currentAlert = alert;
+
   if (tankEmpty) {
     buzzerAlert("EMPTY");
   }
@@ -234,8 +500,7 @@ currentAlert = alert;
   Serial.print("Alert: ");
   Serial.println(alert);
 
-  Serial.println("Motor: OFF (TEST MODE)");
-  delay(2000);
+  Serial.print("Motor: ");
+  Serial.println(currentMotorOn ? "ON" : "OFF");
 
-  server.handleClient();
 }
