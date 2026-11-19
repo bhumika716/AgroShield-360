@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include "dashboard_html.h"
+#include <Preferences.h>
 
 #define BUZZER_PIN 26
 #define SOIL_PIN 34
@@ -20,6 +21,7 @@
 const char* ssid = "AgroShield_360";
 const char* password = "agro360wifi";
 WebServer server(80);
+Preferences preferences;
 int currentSoilRaw = 0;
 int currentMoisture = 0;
 int currentRainRaw = 0;
@@ -48,6 +50,42 @@ unsigned long buzzerOffDuration = 0;
 unsigned long buzzerLastChange = 0;
 
 bool buzzerIsOn = false;
+bool calibrationActive = false;
+bool calibrationWetStage = false;
+
+unsigned long calibrationStart = 0;
+unsigned long calibrationLastSample = 0;
+
+long calibrationTotal = 0;
+int calibrationCount = 0;
+int calibrationDryRaw = 0;
+
+String calibrationStatus = "IDLE";
+void loadSettings() {
+  preferences.begin("agroshield", false);
+
+  dryLimitPercent = preferences.getInt("dry", 30);
+  wetLimitPercent = preferences.getInt("wet", 70);
+
+  calibratedDryRaw = preferences.getInt("dryRaw", DRY_RAW);
+  calibratedWetRaw = preferences.getInt("wetRaw", WET_RAW);
+
+  currentMode = preferences.getString("mode", "AUTO");
+  currentLanguage = preferences.getString("language", "English");
+  voiceAlertsEnabled = preferences.getBool("voice", true);
+}
+
+void saveSettings() {
+  preferences.putInt("dry", dryLimitPercent);
+  preferences.putInt("wet", wetLimitPercent);
+
+  preferences.putInt("dryRaw", calibratedDryRaw);
+  preferences.putInt("wetRaw", calibratedWetRaw);
+
+  preferences.putString("mode", currentMode);
+  preferences.putString("language", currentLanguage);
+  preferences.putBool("voice", voiceAlertsEnabled);
+}
 
 void buzzerAlert(String type) {
 
@@ -214,6 +252,7 @@ void handleSettings() {
   }
 
   voiceAlertsEnabled = (voice == "true");
+  saveSettings();
 
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.send(200, "application/json",
@@ -248,6 +287,7 @@ void handleCalibration() {
 
   calibratedDryRaw = newDry;
   calibratedWetRaw = newWet;
+  saveSettings();
 
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.send(200, "application/json",
@@ -290,8 +330,48 @@ void handleMotor() {
               "{\"success\":true,\"message\":\"Motor command received\"}");
 }
 
+void startCalibration(bool wet) {
+  calibrationActive = true;
+  calibrationWetStage = wet;
+  calibrationStart = millis();
+  calibrationLastSample = 0;
+  calibrationTotal = 0;
+  calibrationCount = 0;
+  calibrationStatus = wet ? "WET_RUNNING" : "DRY_RUNNING";
+}
+
+void updateCalibration() {
+  if (!calibrationActive) return;
+
+  if (millis() - calibrationLastSample >= 500) {
+    calibrationTotal += analogRead(SOIL_PIN);
+    calibrationCount++;
+    calibrationLastSample = millis();
+  }
+
+  if (millis() - calibrationStart >= 10000) {
+    int averageRaw = calibrationTotal / calibrationCount;
+    calibrationActive = false;
+
+    if (!calibrationWetStage) {
+      calibrationDryRaw = averageRaw;
+      calibrationStatus = "DRY_DONE";
+    } else {
+      if (calibrationDryRaw - averageRaw >= 100) {
+        calibratedDryRaw = calibrationDryRaw;
+        calibratedWetRaw = averageRaw;
+        saveSettings();
+        calibrationStatus = "SUCCESS";
+      } else {
+        calibrationStatus = "FAILED";
+      }
+    }
+  }
+}
+
 void setup() {
   Serial.begin(115200);
+  loadSettings();
   WiFi.softAP(ssid, password);
   Serial.println("AgroShield WiFi Started");
   delay(2000);
@@ -307,6 +387,18 @@ void setup() {
   server.on("/api/status", handleStatus);
   server.on("/api/settings", HTTP_POST, handleSettings);
   server.on("/api/calibrate", HTTP_POST, handleCalibration);
+  server.on("/api/calibrate/start", HTTP_POST, []() {
+    startCalibration(false);
+    server.send(200, "application/json", "{\"status\":\"DRY_RUNNING\"}"); 
+  });
+  server.on("/api/calibrate/confirm", HTTP_POST, []() {
+    startCalibration(true);
+    server.send(200, "application/json", "{\"status\":\"WET_RUNNING\"}");
+  });
+  server.on("/api/calibrate/status", HTTP_GET, []() {
+    String json = "{\"status\":\"" + calibrationStatus + "\"}";
+    server.send(200, "application/json", json);
+  });
   server.on("/api/motor", HTTP_POST, handleMotor);
   server.begin();
   Serial.println("HTTP Server Started");
@@ -332,6 +424,7 @@ void setup() {
 }
 
 void loop() {
+  updateCalibration();
   server.handleClient();
   updateBuzzer();
   if (millis() - lastSensorUpdate < 2000) return;
